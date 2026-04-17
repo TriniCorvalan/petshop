@@ -34,8 +34,9 @@ public class ProductDataLoader {
     }
 
     /**
-     * Crea 10 productos por defecto (números {@code 1}–{@code 10}) solo si el
-     * repositorio está vacío. Precio base 1.999–10.999 según producto.
+     * Crea 10 productos por defecto solo si el repositorio está vacío.
+     * No asigna {@code id}: con {@code @GeneratedValue(IDENTITY)}, un id
+     * fijado en Java provoca {@code merge} en {@code save()} y fallos al insertar.
      */
     @Order(Ordered.LOWEST_PRECEDENCE)
     @Transactional
@@ -45,11 +46,9 @@ public class ProductDataLoader {
             return;
         }
         for (int i = 1; i <= 10; i++) {
-            Long productId = Long.valueOf(i);
             String productName = "Product " + i;
             double productPrice = 1_000 * i + 999;
             Product product = new Product();
-            product.setId(productId);
             product.setName(productName);
             product.setPrice(productPrice);
             productRepository.save(product);
