@@ -1,10 +1,5 @@
 package com.example.petshop.model;
 
-import java.util.List;
-
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
-
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.Data;
@@ -23,13 +18,12 @@ public class Order {
     @Column(name = "client_rut")
     private String clientRut;
 
-    @NotEmpty(message = "La orden debe incluir al menos un producto")
-    @JdbcTypeCode(SqlTypes.JSON)
+    @NotBlank(message = "La descripción de productos es requerida")
+    @Lob
     @Column(name = "products")
-    private List<@NotBlank(message = "Cada nombre de producto es requerido") String> products;
+    private String products;
 
-    @Column(name = "status")
-    @NotBlank(message = "El estado es requerido")
+    @Column(name = "status", nullable = false)
     private String status;
 
     @Column(name = "total_price")

@@ -10,6 +10,8 @@ import com.example.petshop.repository.OrderRepository;
 @Service
 public class OrderServiceImpl implements OrderService {
 
+    private static final String DEFAULT_ORDER_STATUS = "PENDIENTE";
+
     private final OrderRepository orderRepository;
 
     public OrderServiceImpl(OrderRepository orderRepository) {
@@ -30,6 +32,9 @@ public class OrderServiceImpl implements OrderService {
     public Order createOrder(Order order) {
         order.setId(null);
         validateProducts(order);
+        if (order.getStatus() == null || order.getStatus().isBlank()) {
+            order.setStatus(DEFAULT_ORDER_STATUS);
+        }
         return orderRepository.save(order);
     }
 
@@ -40,7 +45,9 @@ public class OrderServiceImpl implements OrderService {
         validateProducts(order);
         existing.setClientRut(order.getClientRut());
         existing.setProducts(order.getProducts());
-        existing.setStatus(order.getStatus());
+        if (order.getStatus() != null && !order.getStatus().isBlank()) {
+            existing.setStatus(order.getStatus());
+        }
         existing.setTotalPrice(order.getTotalPrice());
         return orderRepository.save(existing);
     }
@@ -51,13 +58,8 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private void validateProducts(Order order) {
-        if (order.getProducts() == null || order.getProducts().isEmpty()) {
-            throw new IllegalArgumentException("La orden debe incluir al menos un producto");
-        }
-        for (String product : order.getProducts()) {
-            if (product == null || product.isBlank()) {
-                throw new IllegalArgumentException("Cada producto debe ser un texto no vacío");
-            }
+        if (order.getProducts() == null || order.getProducts().isBlank()) {
+            throw new IllegalArgumentException("La orden debe incluir el texto de productos (no vacío)");
         }
     }
 }
