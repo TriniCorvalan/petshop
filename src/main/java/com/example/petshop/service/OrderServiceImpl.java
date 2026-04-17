@@ -1,26 +1,25 @@
 package com.example.petshop.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 
-import com.example.petshop.model.*;
-import com.example.petshop.repository.*;
+import com.example.petshop.model.Order;
+import com.example.petshop.repository.OrderRepository;
 
 @Service
 public class OrderServiceImpl implements OrderService {
-    @Autowired
-    private OrderRepository orderRepository;
 
-    @Autowired
-    private ProductRepository productRepository;
+    private final OrderRepository orderRepository;
+
+    public OrderServiceImpl(OrderRepository orderRepository) {
+        this.orderRepository = orderRepository;
+    }
 
     @Override
     public List<Order> getOrders() {
         return orderRepository.findAll();
-    }   
+    }
 
     @Override
     public List<Order> getOrdersByClientRut(String clientRut) {
@@ -29,28 +28,21 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Order createOrder(Order order) {
-        if (order.getProductPerOrder() == null || order.getProductPerOrder().isEmpty()) {
-            throw new IllegalArgumentException("La orden debe incluir al menos un producto");
-        }
-        List<ProductOrder> lines = order.getProductPerOrder();
-        Long[] productIds = new Long[lines.size()];
-        int[] quantities = new int[lines.size()];
-        for (int i = 0; i < lines.size(); i++) {
-            ProductOrder line = lines.get(i);
-            if (line.getProduct() == null || line.getProduct().getId() == null) {
-                throw new IllegalArgumentException("Cada línea debe incluir el id del producto");
-            }
-            productIds[i] = line.getProduct().getId();
-            quantities[i] = line.getQuantity();
-        }
-        Order built = buildOrder(order.getClientRut(), productIds, quantities, order.getStatus());
-        return orderRepository.save(built);
+        order.setId(null);
+        validateProducts(order);
+        return orderRepository.save(order);
     }
 
     @Override
     public Order updateOrder(Long id, Order order) {
-        order.setId(id);
-        return orderRepository.save(order);
+        Order existing = orderRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Orden no encontrada"));
+        validateProducts(order);
+        existing.setClientRut(order.getClientRut());
+        existing.setProducts(order.getProducts());
+        existing.setStatus(order.getStatus());
+        existing.setTotalPrice(order.getTotalPrice());
+        return orderRepository.save(existing);
     }
 
     @Override
@@ -58,27 +50,14 @@ public class OrderServiceImpl implements OrderService {
         orderRepository.deleteById(id);
     }
 
-    private Order buildOrder(String clientRut, Long[] productIds, int[] quantities, String status) {
-        Order order = new Order();
-        order.setClientRut(clientRut);
-        order.setStatus(status);
-
-        List<ProductOrder> productOrders = new ArrayList<>();
-        for (int i = 0; i < productIds.length; i++) {
-            Product product = productRepository.findById(productIds[i])
-                .orElseThrow(() -> new RuntimeException("Product not found"));
-            int quantity = quantities[i];
-            ProductOrder productOrder = new ProductOrder();
-            productOrder.setProduct(product);
-            productOrder.setOrder(order);
-            productOrder.setQuantity(quantity);
-            productOrders.add(productOrder);
+    private void validateProducts(Order order) {
+        if (order.getProducts() == null || order.getProducts().isEmpty()) {
+            throw new IllegalArgumentException("La orden debe incluir al menos un producto");
         }
-
-        order.setProductPerOrder(productOrders);
-        order.setTotalPrice(productOrders.stream()
-                .mapToDouble(productOrder -> productOrder.getProduct().getPrice() * productOrder.getQuantity())
-                .sum());
-        return order;
+        for (String product : order.getProducts()) {
+            if (product == null || product.isBlank()) {
+                throw new IllegalArgumentException("Cada producto debe ser un texto no vacío");
+            }
+        }
     }
 }

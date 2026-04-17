@@ -2,9 +2,12 @@ package com.example.petshop.model;
 
 import java.util.List;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import jakarta.persistence.*;
-import lombok.Data;
 import jakarta.validation.constraints.*;
+import lombok.Data;
 
 @Entity
 @Data
@@ -20,8 +23,10 @@ public class Order {
     @Column(name = "client_rut")
     private String clientRut;
 
-    @OneToMany(mappedBy = "order")
-    private List<ProductOrder> productPerOrder;
+    @NotEmpty(message = "La orden debe incluir al menos un producto")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "products")
+    private List<@NotBlank(message = "Cada nombre de producto es requerido") String> products;
 
     @Column(name = "status")
     @NotBlank(message = "El estado es requerido")
@@ -29,18 +34,8 @@ public class Order {
 
     @Column(name = "total_price")
     @NotNull(message = "El precio total es requerido")
-    @Min(value = 0, message = "El precio total debe ser mayor a 0")
-    private double totalPrice;
-
-    @PrePersist
-    @PreUpdate
-    private void computeTotalPrice() {
-        this.totalPrice = (productPerOrder == null) ? 0.0
-                : productPerOrder.stream()
-                        .filter(productOrder -> productOrder.getProduct() != null)
-                        .mapToDouble(productOrder -> productOrder.getProduct().getPrice() * productOrder.getQuantity())
-                        .sum();
-    }
+    @Min(value = 0, message = "El precio total debe ser mayor o igual a 0")
+    private Double totalPrice;
 
     public Order() {
     }
